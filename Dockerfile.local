@@ -1,0 +1,8 @@
+FROM golang:latest
+
+RUN mkdir /code
+WORKDIR /code
+
+RUN go get github.com/silenceper/gowatch
+
+CMD ["gowatch"]
