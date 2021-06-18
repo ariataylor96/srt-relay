@@ -1,12 +1,17 @@
-FROM golang:latest
+FROM golang:latest as build
 
-RUN mkdir /code
-WORKDIR /code
+RUN mkdir /srt-relay
+WORKDIR /srt-relay
 
-COPY . .
+COPY main.go go.mod go.sum .
 
 ENV GIN_MODE release
 
 RUN go build
+RUN ls
+
+FROM ubuntu:latest
+
+COPY --from=build /srt-relay .
 
 CMD ["./srt-relay"]
