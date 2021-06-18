@@ -5,13 +5,13 @@ WORKDIR /srt-relay
 
 COPY main.go go.mod go.sum .
 
-ENV GIN_MODE release
-
 RUN go build
 RUN ls
 
 FROM ubuntu:latest
 
 COPY --from=build /srt-relay .
+
+ENV GIN_MODE release
 
 CMD ["./srt-relay"]
