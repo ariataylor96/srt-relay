@@ -40,14 +40,6 @@ func removeUserFromListeners(user User, username string) {
 	}
 }
 
-func deleteAllListenersForUser(username string) {
-	_, present := listeners[username]
-
-	if present {
-		delete(listeners, username)
-	}
-}
-
 func wsHandler(w http.ResponseWriter, r *http.Request) {
 	conn, err := wsUpgrader.Upgrade(w, r, nil)
 	if err != nil {
@@ -73,8 +65,6 @@ func wsHandler(w http.ResponseWriter, r *http.Request) {
 			identification[user] = username
 			fmt.Println("Identified", user)
 			fmt.Println(identification)
-
-			defer deleteAllListenersForUser(username)
 			continue
 		}
 
