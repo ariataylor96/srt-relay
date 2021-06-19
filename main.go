@@ -23,6 +23,31 @@ var wsUpgrader = websocket.Upgrader{
 var listeners map[string]*[]User = make(map[string]*[]User)
 var identification map[User]string = make(map[User]string)
 
+func removeUserFromListeners(user User, username string) {
+	filtered := make([]User, 0)
+	unfiltered := *listeners[username]
+
+	for _, u := range unfiltered {
+		if u != user {
+			filtered = append(filtered, u)
+		}
+	}
+
+	if len(filtered) == 0 {
+		delete(listeners, username)
+	} else {
+		listeners[username] = &filtered
+	}
+}
+
+func deleteAllListenersForUser(username string) {
+	_, present := listeners[username]
+
+	if present {
+		delete(listeners, username)
+	}
+}
+
 func wsHandler(w http.ResponseWriter, r *http.Request) {
 	conn, err := wsUpgrader.Upgrade(w, r, nil)
 	if err != nil {
@@ -48,6 +73,8 @@ func wsHandler(w http.ResponseWriter, r *http.Request) {
 			identification[user] = username
 			fmt.Println("Identified", user)
 			fmt.Println(identification)
+
+			defer deleteAllListenersForUser(username)
 			continue
 		}
 
@@ -62,6 +89,8 @@ func wsHandler(w http.ResponseWriter, r *http.Request) {
 			*listeners[username] = append(*listeners[username], user)
 			fmt.Println("Listening", user)
 			fmt.Println(listeners)
+
+			defer removeUserFromListeners(user, username)
 			continue
 		}
 
