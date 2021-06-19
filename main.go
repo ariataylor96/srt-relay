@@ -40,6 +40,18 @@ func removeUserFromListeners(user User, username string) {
 	}
 }
 
+func userAlreadyListening(user User, username string) bool {
+	list := *listeners[username]
+
+	for _, u := range list {
+		if u == user {
+			return true
+		}
+	}
+
+	return false
+}
+
 func wsHandler(w http.ResponseWriter, r *http.Request) {
 	conn, err := wsUpgrader.Upgrade(w, r, nil)
 	if err != nil {
@@ -74,6 +86,10 @@ func wsHandler(w http.ResponseWriter, r *http.Request) {
 
 			if !ok {
 				listeners[username] = &[]User{}
+			}
+
+			if userAlreadyListening(user, username) {
+				continue
 			}
 
 			*listeners[username] = append(*listeners[username], user)
