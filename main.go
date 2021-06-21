@@ -66,7 +66,6 @@ func wsHandler(w http.ResponseWriter, r *http.Request) {
 		t, msg, err := conn.ReadMessage()
 
 		if err != nil {
-			delete(identification, user)
 			break
 		}
 
@@ -86,6 +85,7 @@ func wsHandler(w http.ResponseWriter, r *http.Request) {
 			identification[user] = username
 
 			defer delete(identifiedUsers, username)
+			defer delete(identification, user)
 
 			fmt.Println("Identified", user)
 			fmt.Println(identification)
