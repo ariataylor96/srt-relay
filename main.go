@@ -74,9 +74,9 @@ func wsHandler(w http.ResponseWriter, r *http.Request) {
 		if strings.HasPrefix(stringified, "ident:") {
 			username := strings.Split(stringified, ":")[1]
 
-			_, alreadyIdentified := identifiedUsers[username]
+			identificationPairing, alreadyIdentified := identifiedUsers[username]
 
-			if alreadyIdentified {
+			if alreadyIdentified && identificationPairing != user {
 				conn.Close()
 				return
 			}
