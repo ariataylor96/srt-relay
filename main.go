@@ -22,6 +22,7 @@ var wsUpgrader = websocket.Upgrader{
 
 var listeners map[string]*[]User = make(map[string]*[]User)
 var identification map[User]string = make(map[User]string)
+var identifiedUsers map[string]User = make(map[string]User)
 
 func removeUserFromListeners(user User, username string) {
 	filtered := make([]User, 0)
@@ -74,7 +75,18 @@ func wsHandler(w http.ResponseWriter, r *http.Request) {
 		if strings.HasPrefix(stringified, "ident:") {
 			username := strings.Split(stringified, ":")[1]
 
+			_, alreadyIdentified := identifiedUsers[username]
+
+			if alreadyIdentified {
+				conn.Close()
+				return
+			}
+
+			identifiedUsers[username] = user
 			identification[user] = username
+
+			defer delete(identifiedUsers, username)
+
 			fmt.Println("Identified", user)
 			fmt.Println(identification)
 			continue

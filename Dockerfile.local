@@ -1,7 +1,7 @@
 FROM golang:latest
 
-RUN mkdir /code
-WORKDIR /code
+RUN mkdir /srt-relay
+WORKDIR /srt-relay
 
 RUN go get github.com/silenceper/gowatch
 
