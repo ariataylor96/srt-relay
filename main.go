@@ -72,7 +72,7 @@ func main() {
 		// Handle an invalid data structure
 		body := string(rawBody)
 		userId := gjson.Get(body, "data.relationships.user.data.id")
-		userEmail := gjson.Get(body, "included#(type==\"user\").email")
+		userEmail := gjson.Get(body, "included#(type==\"user\").attributes.email")
 		if !userId.Exists() || !userEmail.Exists() {
 			c.JSON(400, failure_response)
 		}
