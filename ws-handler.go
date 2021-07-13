@@ -137,7 +137,7 @@ func wsHandler(w http.ResponseWriter, r *http.Request) {
 		if hasLastMessage {
 			registration, isRegistered := userToRegistration[user]
 
-			if lastMessage >= now-300 {
+			if lastMessage >= now-200 {
 				if !isRegistered || registration.ValidUntil <= now {
 					conn.Close()
 				}
