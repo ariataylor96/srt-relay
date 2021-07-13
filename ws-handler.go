@@ -111,7 +111,6 @@ func wsHandler(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		fmt.Println(user.Listeners)
 		user.Send(t, msg)
 	}
 }
