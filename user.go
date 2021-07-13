@@ -39,22 +39,18 @@ func (u *User) IsListening(user User) bool {
 	return false
 }
 
-func (u *User) IsRateLimited() bool {
-	// First messages are okay
-	if u.LastReceived == 0 {
-		return false
-	}
+func (u *User) HasValidSubscription() bool {
+	return u.Registration.ValidUntil >= unixNowMs()
+}
 
-	// Registered users can send as much as they like
-	if u.Registration.ID != 0 {
-		if u.Registration.ValidUntil >= unixNowMs() {
-			return false
-		}
+func (u *User) IsRateLimited() bool {
+	// First messages are okay, and subscribers are never limited
+	if u.LastReceived == 0 || u.HasValidSubscription() {
+		return false
 	}
 
 	// Free users can only send so often
 	freeTierBuffer, _ := strconv.ParseInt(defaultEnv("FREE_TIER_BUFFER", "200"), 10, 64)
-
 	if u.LastReceived >= unixNowMs()-freeTierBuffer {
 		return true
 	}
