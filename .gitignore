@@ -26,3 +26,6 @@
 # End of https://www.toptal.com/developers/gitignore/api/go
 srt-relay
 code
+data.db
+test.py
+test.json

@@ -3,7 +3,7 @@ FROM golang:latest as build
 RUN mkdir /srt-relay
 WORKDIR /srt-relay
 
-COPY main.go go.mod go.sum .
+COPY main.go ws-handler.go go.mod go.sum .
 
 RUN go build
 RUN ls
