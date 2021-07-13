@@ -6,7 +6,6 @@ WORKDIR /srt-relay
 COPY main.go ws-handler.go go.mod go.sum .
 
 RUN go build
-RUN ls
 
 FROM ubuntu:latest
 
