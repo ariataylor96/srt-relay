@@ -72,18 +72,24 @@ func main() {
 		// Handle an invalid data structure
 		body := string(rawBody)
 		userId := gjson.Get(body, "data.relationships.user.data.id")
-		userEmail := gjson.Get(body, "included#(type==\"user\").attributes.email")
-		if !userId.Exists() || !userEmail.Exists() {
+		userEmail := gjson.Get(body, `included.#(type="user").attributes.email`)
+		if !userId.Exists() {
+			fmt.Println(userId.String(), userEmail.String())
 			c.JSON(400, failure_response)
 			return
 		}
 
 		// Get or create a User instance
-		db.FirstOrCreate(&user, RegisteredUser{UserId: userId.String(), UserEmail: userEmail.String()})
+		db.FirstOrCreate(&user, RegisteredUser{UserId: userId.String()})
 
 		// Give them a product key if they don't have one already
 		if user.ProductKey == "" {
 			user.ProductKey = sid.IdBase64()
+		}
+
+		// Save their email if we have it now but didn't before
+		if user.UserEmail == "" {
+			user.UserEmail = userEmail.String()
 		}
 
 		// Add another month to them
