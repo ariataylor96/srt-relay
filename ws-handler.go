@@ -90,16 +90,16 @@ func wsHandler(w http.ResponseWriter, r *http.Request) {
 			username := strings.Split(stringified, ":")[1]
 			userToListenTo, ok := nameToUser[username]
 
-			if !ok || userToListenTo.IsListening(user) {
+			if !ok || userToListenTo.IsListening(&user) {
 				continue
 			}
 
 			userToListenTo.Listen(&user)
 
 			if user.Name != "" {
-				fmt.Println("LISTEN:" + user.Name + ":" + userToListenTo.Name)
+				fmt.Println("listen:" + user.Name + ":" + userToListenTo.Name)
 			} else {
-				fmt.Println("LISTEN" + userToListenTo.Name + ":")
+				fmt.Println("listen:" + userToListenTo.Name + ":")
 			}
 
 			defer userToListenTo.Unlisten(&user)
@@ -111,6 +111,7 @@ func wsHandler(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
+		fmt.Println(user.Listeners)
 		user.Send(t, msg)
 	}
 }

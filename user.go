@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"github.com/gorilla/websocket"
 	"strconv"
 )
@@ -29,9 +30,9 @@ func (u *User) Unlisten(user *User) {
 	u.Listeners = filtered
 }
 
-func (u *User) IsListening(user User) bool {
+func (u *User) IsListening(user *User) bool {
 	for _, listener := range u.Listeners {
-		if listener == &user {
+		if listener == user {
 			return true
 		}
 	}
@@ -66,6 +67,7 @@ func (u *User) Send(messageType int, data []byte) {
 
 	u.LastReceived = unixNowMs()
 	for _, listener := range u.Listeners {
+		fmt.Println(listener)
 		listener.Conn.WriteMessage(messageType, data)
 	}
 }
