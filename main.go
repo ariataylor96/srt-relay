@@ -75,6 +75,7 @@ func main() {
 		userEmail := gjson.Get(body, "included#(type==\"user\").attributes.email")
 		if !userId.Exists() || !userEmail.Exists() {
 			c.JSON(400, failure_response)
+			return
 		}
 
 		// Get or create a User instance
