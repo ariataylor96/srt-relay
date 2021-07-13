@@ -3,7 +3,10 @@ package main
 import (
 	"crypto/hmac"
 	"crypto/md5"
+	"crypto/subtle"
+	"encoding/hex"
 	"encoding/json"
+
 	"fmt"
 	"os"
 	"time"
@@ -18,6 +21,7 @@ import (
 type RegisteredUser struct {
 	gorm.Model
 	UserId     string
+	UserEmail  string
 	ProductKey string `gorm:"index"`
 	ValidUntil int64
 }
@@ -26,19 +30,18 @@ const MONTH_IN_SECONDS = 2764800
 
 var db *gorm.DB
 
-func validMac(message, messageMAC, key []byte) bool {
-	mac := hmac.New(md5.New, key)
-	mac.Write(message)
+func validateMessage(signature, body []byte) bool {
+	patreonHmacKey := os.Getenv("PATREON_SECRET_KEY")
+	mac := hmac.New(md5.New, []byte(patreonHmacKey))
+	mac.Write(body)
 	expectedMAC := mac.Sum(nil)
 
-	return hmac.Equal(messageMAC, expectedMAC)
+	return subtle.ConstantTimeCompare(signature, []byte(hex.EncodeToString(expectedMAC))) == 1
 }
 
 func main() {
 	server := gin.Default()
 	db, _ = gorm.Open(sqlite.Open("/data.db"), &gorm.Config{})
-
-	patreonHmacKey := os.Getenv("PATREON_SECRET_KEY")
 	failure_response := gin.H{"success": false}
 
 	db.AutoMigrate(&RegisteredUser{})
@@ -58,22 +61,24 @@ func main() {
 			return
 		}
 
-		// Handle an invalid data structure
-		body := string(rawBody)
-		userId := gjson.Get(body, "data.relationships.patron.data.id")
-		if !userId.Exists() {
-			c.JSON(400, failure_response)
-		}
-
 		signature := c.Request.Header.Get("X-Patreon-Signature")
 
-		if !validMac(rawBody, []byte(signature), []byte(patreonHmacKey)) {
+		if !validateMessage([]byte(signature), rawBody) {
+			fmt.Println(signature, "did not match")
 			c.JSON(400, failure_response)
 			return
 		}
 
+		// Handle an invalid data structure
+		body := string(rawBody)
+		userId := gjson.Get(body, "data.relationships.user.data.id")
+		userEmail := gjson.Get(body, "included#(type==\"user\").email")
+		if !userId.Exists() || !userEmail.Exists() {
+			c.JSON(400, failure_response)
+		}
+
 		// Get or create a User instance
-		db.FirstOrCreate(&user, RegisteredUser{UserId: userId.String()})
+		db.FirstOrCreate(&user, RegisteredUser{UserId: userId.String(), UserEmail: userEmail.String()})
 
 		// Give them a product key if they don't have one already
 		if user.ProductKey == "" {
@@ -87,7 +92,7 @@ func main() {
 		db.Model(&user).Updates(user)
 
 		json_user, _ := json.Marshal(user)
-		c.JSON(200, json_user)
+		c.JSON(200, gin.H{"succes": true})
 		fmt.Println(string(json_user))
 	})
 
