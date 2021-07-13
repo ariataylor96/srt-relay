@@ -26,7 +26,11 @@ type RegisteredUser struct {
 	ValidUntil int64
 }
 
-const MONTH_IN_SECONDS = 2764800
+// The keen eyed amongst you may notice that this is 35 days.
+// The seasoned programmers amongst you will know that this
+// saves me from having to actually handle dates properly
+// and that is FAR more valuable than network bandwidth
+const MONTH_IN_SECONDS = 3024000
 
 var db *gorm.DB
 
