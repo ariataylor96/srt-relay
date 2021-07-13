@@ -35,6 +35,10 @@ const MONTH_IN_SECONDS = 3024000
 var db *gorm.DB
 
 func validateMessage(signature, body []byte) bool {
+	if gin.Mode() == "debug" {
+		return true
+	}
+
 	patreonHmacKey := os.Getenv("PATREON_SECRET_KEY")
 	mac := hmac.New(md5.New, []byte(patreonHmacKey))
 	mac.Write(body)
@@ -45,7 +49,7 @@ func validateMessage(signature, body []byte) bool {
 
 func main() {
 	server := gin.Default()
-	db, _ = gorm.Open(sqlite.Open("/data.db"), &gorm.Config{})
+	db, _ = gorm.Open(sqlite.Open(defaultEnv("DATABASE_PATH", "/data.db")), &gorm.Config{})
 	failure_response := gin.H{"success": false}
 
 	db.AutoMigrate(&RegisteredUser{})

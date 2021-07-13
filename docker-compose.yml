@@ -4,8 +4,9 @@ services:
     build:
       context: .
       dockerfile: Dockerfile.local
+    environment:
+      - DATABASE_PATH=/srt-relay/data.db
     ports:
       - 3000:3000
     volumes:
       - .:/srt-relay
-      - ./data.db:/data.db

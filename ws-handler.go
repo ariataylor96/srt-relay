@@ -5,12 +5,7 @@ import (
 	"github.com/gorilla/websocket"
 	"net/http"
 	"strings"
-	"time"
 )
-
-type User struct {
-	Conn *websocket.Conn
-}
 
 var wsUpgrader = websocket.Upgrader{
 	ReadBufferSize:  1024,
@@ -20,39 +15,19 @@ var wsUpgrader = websocket.Upgrader{
 	},
 }
 
-var listeners map[string]*[]User = make(map[string]*[]User)
-var identification map[User]string = make(map[User]string)
-var identifiedUsers map[string]User = make(map[string]User)
-var userToRegistration map[User]RegisteredUser = make(map[User]RegisteredUser)
-var lastReceived map[User]int64 = make(map[User]int64)
+var users []User = make([]User, 0)
+var nameToUser map[string]*User = make(map[string]*User)
 
-func removeUserFromListeners(user User, username string) {
+func removeUserFromList(user User) {
 	filtered := make([]User, 0)
-	unfiltered := *listeners[username]
 
-	for _, u := range unfiltered {
-		if u != user {
+	for _, u := range users {
+		if &u != &user {
 			filtered = append(filtered, u)
 		}
 	}
 
-	if len(filtered) == 0 {
-		delete(listeners, username)
-	} else {
-		listeners[username] = &filtered
-	}
-}
-
-func userAlreadyListening(user User, username string) bool {
-	list := *listeners[username]
-
-	for _, u := range list {
-		if u == user {
-			return true
-		}
-	}
-
-	return false
+	users = filtered
 }
 
 func wsHandler(w http.ResponseWriter, r *http.Request) {
@@ -62,7 +37,10 @@ func wsHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	user := User{conn}
+	user := User{Conn: conn, Listeners: make([]*User, 0)}
+
+	users = append(users, user)
+	defer removeUserFromList(user)
 
 	for {
 		t, msg, err := conn.ReadMessage()
@@ -71,7 +49,6 @@ func wsHandler(w http.ResponseWriter, r *http.Request) {
 			break
 		}
 
-		now := time.Now().UnixNano() / 1000000
 		stringified := string(msg)
 
 		if strings.HasPrefix(stringified, "key:") {
@@ -84,8 +61,7 @@ func wsHandler(w http.ResponseWriter, r *http.Request) {
 				return
 			}
 
-			userToRegistration[user] = registration
-			defer delete(userToRegistration, user)
+			user.Registration = registration
 
 			fmt.Println("Fetched registration for key", key)
 			continue
@@ -94,68 +70,47 @@ func wsHandler(w http.ResponseWriter, r *http.Request) {
 		if strings.HasPrefix(stringified, "ident:") {
 			username := strings.Split(stringified, ":")[1]
 
-			identificationPairing, alreadyIdentified := identifiedUsers[username]
+			identificationPairing, alreadyIdentified := nameToUser[username]
 
-			if alreadyIdentified && identificationPairing != user {
+			if alreadyIdentified && identificationPairing != &user {
 				conn.Close()
 				return
 			}
 
-			identifiedUsers[username] = user
-			identification[user] = username
+			user.Name = username
 
-			defer delete(identifiedUsers, username)
-			defer delete(identification, user)
+			nameToUser[username] = &user
+			defer delete(nameToUser, username)
 
-			fmt.Println("Identified", user)
-			fmt.Println(identification)
+			fmt.Println("Identified", username)
 			continue
 		}
 
 		if strings.HasPrefix(stringified, "listen:") {
 			username := strings.Split(stringified, ":")[1]
-			_, ok := listeners[username]
+			userToListenTo, ok := nameToUser[username]
 
-			if !ok {
-				listeners[username] = &[]User{}
-			}
-
-			if userAlreadyListening(user, username) {
+			if !ok || userToListenTo.IsListening(user) {
 				continue
 			}
 
-			*listeners[username] = append(*listeners[username], user)
-			fmt.Println("Listening", user)
-			fmt.Println(listeners)
+			userToListenTo.Listen(&user)
 
-			defer removeUserFromListeners(user, username)
+			if user.Name != "" {
+				fmt.Println("LISTEN:" + user.Name + ":" + userToListenTo.Name)
+			} else {
+				fmt.Println("LISTEN" + userToListenTo.Name + ":")
+			}
+
+			defer userToListenTo.Unlisten(&user)
 			continue
 		}
 
-		lastMessage, hasLastMessage := lastReceived[user]
-
-		if hasLastMessage {
-			registration, isRegistered := userToRegistration[user]
-
-			if lastMessage >= now-200 {
-				if !isRegistered || registration.ValidUntil <= now {
-					conn.Close()
-				}
-			}
+		if user.IsRateLimited() {
+			conn.Close()
+			return
 		}
 
-		lastReceived[user] = now
-
-		username, identified := identification[user]
-
-		if identified {
-			userListeners, hasListeners := listeners[username]
-
-			if hasListeners {
-				for _, u := range *userListeners {
-					u.Conn.WriteMessage(t, msg)
-				}
-			}
-		}
+		user.Send(t, msg)
 	}
 }
