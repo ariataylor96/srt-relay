@@ -1,7 +1,6 @@
 package main
 
 import (
-	"fmt"
 	"github.com/gorilla/websocket"
 	"strconv"
 )
@@ -67,7 +66,6 @@ func (u *User) Send(messageType int, data []byte) {
 
 	u.LastReceived = unixNowMs()
 	for _, listener := range u.Listeners {
-		fmt.Println(listener)
 		listener.Conn.WriteMessage(messageType, data)
 	}
 }
